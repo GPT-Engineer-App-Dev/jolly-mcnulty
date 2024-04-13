@@ -11,9 +11,18 @@ const Index = () => {
     const headers = lines[0].split(",").map((h) => h.trim());
     const data = lines.slice(1).map((line) => {
       const values = line.split(",").map((v) => v.trim());
-      return headers.reduce((obj, key, i) => ({ ...obj, [key]: values[i] }), {});
+      const row = headers.reduce((obj, key, i) => ({ ...obj, [key]: values[i] }), {});
+
+      const match = row.path.match(/projects\/([^/]+)/);
+      if (match) {
+        row.project_id = match[1];
+      } else {
+        console.warn(`Could not extract project ID from path: ${row.path}`);
+      }
+
+      return row;
     });
-    return data;
+    return data.filter((row) => row.project_id);
   };
 
   const parseCSV = (file) => {
@@ -39,7 +48,7 @@ const Index = () => {
   };
 
   // Get unique project IDs
-  const uniqueProjects = [...new Set(data.map((d) => d.project_id))];
+  const uniqueProjects = [...new Set(data.map((d) => d.project_id).filter(Boolean))];
 
   // Filter data by selected project
   const filteredData = selectedProject ? data.filter((d) => d.project_id === selectedProject) : data;
