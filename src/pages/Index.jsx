@@ -9,20 +9,32 @@ const Index = () => {
   const customParse = (csv) => {
     const lines = csv.split("\n");
     const headers = lines[0].split(",").map((h) => h.trim());
+
+    const requiredHeaders = ["path", "type", "created_at"];
+    const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+    if (missingHeaders.length > 0) {
+      throw new Error(`Missing required CSV headers: ${missingHeaders.join(", ")}`);
+    }
+
     const data = lines.slice(1).map((line) => {
       const values = line.split(",").map((v) => v.trim());
       const row = headers.reduce((obj, key, i) => ({ ...obj, [key]: values[i] }), {});
 
-      const match = row.path.match(/projects\/([^/]+)/);
-      if (match) {
-        row.project_id = match[1];
+      if (row.path) {
+        const match = row.path.match(/projects\/([^/]+)/);
+        if (match) {
+          row.project_id = match[1];
+        } else {
+          console.warn(`Could not extract project ID from path: ${row.path}`);
+        }
       } else {
-        console.warn(`Could not extract project ID from path: ${row.path}`);
+        console.warn(`Row is missing required "path" field:`, row);
       }
 
       return row;
     });
-    return data.filter((row) => row.project_id);
+
+    return data.filter((row) => row.project_id && row.path);
   };
 
   const parseCSV = (file) => {
@@ -33,7 +45,7 @@ const Index = () => {
       setData(filtered);
     } catch (err) {
       console.error("CSV parsing error:", err);
-      alert("Error parsing CSV file");
+      alert("Error parsing CSV file. Please check the file format and try again.");
     }
   };
 
